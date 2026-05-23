@@ -16,6 +16,12 @@
   --erreur-bord:  #7a3333;
   --erreur-text:  #f48080;
   --ombre:        0 2px 8px rgba(0,0,0,0.4);
+
+  /* Couleurs de statut des créneaux de traversée */
+  --score-excellent:   #437a22;
+  --score-favorable:   #7bb852;
+  --score-acceptable:  #c49a00;
+  --score-defavorable: #a12c2c;
 }
 
 /* Surcharge pour les utilisateurs préférant le mode clair */
@@ -37,6 +43,11 @@
     --erreur-bord:  #ffcccc;
     --erreur-text:  #aa0000;
     --ombre:        0 1px 4px rgba(0,0,0,0.08);
+
+    --score-excellent:   #437a22;
+    --score-favorable:   #7bb852;
+    --score-acceptable:  #c49a00;
+    --score-defavorable: #a12c2c;
   }
 }
 

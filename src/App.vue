@@ -2,7 +2,8 @@
   <!-- Nav globale : sera étoffée à chaque nouvel outil ajouté -->
   <nav class="nav-principale">
     <span class="logo">⚓ Outils Bateau</span>
-    <RouterLink to="/">Météo Époxy</RouterLink>
+    <RouterLink to="/">🌡️ Météo Époxy</RouterLink>
+    <RouterLink to="/courant">⚓ Courant</RouterLink>
   </nav>
   <RouterView />
 </template>
