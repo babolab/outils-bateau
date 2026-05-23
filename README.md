@@ -1,4 +1,4 @@
-# ⚓ Outils Bateau
+# ⛵ Outils Bateau
 
 Suite d'outils web pour la navigation de plaisance — 100 % côté navigateur, sans serveur.
 
@@ -12,6 +12,7 @@ Suite d'outils web pour la navigation de plaisance — 100 % côté navigateur, 
 Détecte les créneaux horaires favorables à l'application d'époxy sur un bateau :
 - Température ≥ seuil choisi (0°C, 5°C ou 10°C)
 - Point de rosée ≤ T° − 3°C (air suffisamment sec)
+- Les créneaux qui passent minuit affichent un badge **J+1** sur l'heure de fin
 
 Modèles météo disponibles :
 
@@ -32,6 +33,7 @@ La localisation est configurable (Cherbourg par défaut, sauvegardée entre les 
 - **Vue Router** — navigation entre outils (hash history, compatible GitHub Pages)
 - **Open-Meteo API** — données météo gratuites, CORS natif, sans clé API
 - **GitHub Actions** — build et déploiement automatiques sur push
+- **CSS variables** — thème sombre par défaut, clair si `prefers-color-scheme: light`
 
 ---
 
