@@ -33,7 +33,7 @@
         <FriseHoraire
           :dateStr="dateStr"
           :minutesDepart="minutesDepart"
-          :heureDepart="etat.heureDepart"
+          :heureDepart="heureDepart"
           :extremes="jourData.extremes"
           @update:minutesDepart="mettreAJourDepart"
         />
@@ -50,7 +50,7 @@
         <div class="champs-calcul">
           <label>
             Heure de départ
-            <input type="time" :value="etat.heureDepart" @change="e => mettreAJourDepartHeure(e.target.value)" />
+            <input type="time" :value="heureDepart" @change="e => mettreAJourDepartHeure(e.target.value)" />
           </label>
           <label>
             Direction
@@ -136,16 +136,29 @@ const jourData = computed(() => donneesAnnee.value.get(dateStr.value) ?? null)
 /** Direction locale à cette vue (découplée de la direction globale) */
 const directionLocale = ref('aller')
 
-/** Minutes de départ synchronisées avec etat.heureDepart */
-const minutesDepart = ref(hhmm2min(etat.heureDepart))
-watch(() => etat.heureDepart, h => { minutesDepart.value = hhmm2min(h) })
+/** Heure de départ réactive selon la direction sélectionnée */
+const heureDepart = computed(() =>
+  directionLocale.value === 'aller' ? etat.heureDepartAller : etat.heureDepartRetour
+)
+
+/** Minutes de départ synchronisées avec l'heure de départ active */
+const minutesDepart = ref(hhmm2min(etat.heureDepartAller))
+
+// Quand on change de direction, on cale le curseur sur l'heure correspondante
+watch(directionLocale, () => { minutesDepart.value = hhmm2min(heureDepart.value) })
+
+// Quand l'heure change depuis le panneau paramètres, on répercute sur le curseur
+watch(() => etat.heureDepartAller,  h => { if (directionLocale.value === 'aller')  minutesDepart.value = hhmm2min(h) })
+watch(() => etat.heureDepartRetour, h => { if (directionLocale.value === 'retour') minutesDepart.value = hhmm2min(h) })
 
 function mettreAJourDepart(min) {
   minutesDepart.value = min
-  etat.heureDepart = min2hhmm(min)
+  if (directionLocale.value === 'aller') etat.heureDepartAller  = min2hhmm(min)
+  else                                   etat.heureDepartRetour = min2hhmm(min)
 }
 function mettreAJourDepartHeure(hhmm) {
-  etat.heureDepart = hhmm
+  if (directionLocale.value === 'aller') etat.heureDepartAller  = hhmm
+  else                                   etat.heureDepartRetour = hhmm
   minutesDepart.value = hhmm2min(hhmm)
 }
 

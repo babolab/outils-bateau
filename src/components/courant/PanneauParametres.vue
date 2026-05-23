@@ -1,8 +1,14 @@
 <template>
   <div class="panneau-params">
     <div class="groupe">
-      <label for="heure-depart">Heure de départ cible</label>
-      <input id="heure-depart" type="time" v-model="etat.heureDepart" />
+      <label for="heure-depart-aller">Départ aller</label>
+      <input id="heure-depart-aller" type="time" v-model="etat.heureDepartAller" />
+      <span class="aide">Cherbourg → Aurigny</span>
+    </div>
+    <div class="groupe">
+      <label for="heure-depart-retour">Départ retour</label>
+      <input id="heure-depart-retour" type="time" v-model="etat.heureDepartRetour" />
+      <span class="aide">Aurigny → Cherbourg</span>
     </div>
     <div class="groupe">
       <label>Tolérance ±{{ etat.tolerance }} min</label>

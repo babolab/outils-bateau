@@ -3,12 +3,13 @@ import { reactive, computed } from 'vue'
 // ─── État global partagé entre toutes les vues ────────────────────────────────
 
 export const etat = reactive({
-  heureDepart: '08:30',   // centre de la plage 7h30–9h30 (modifiable sur la page)
-  tolerance:   60,        // minutes (±1h → fenêtre 7h30–9h30)
-  vitesseFond: 5.5,       // nœuds
-  direction:   'both',    // 'aller' | 'retour' | 'both'
+  heureDepartAller:  '08:30',  // centre de la plage 7h30–9h30 (Cherbourg → Aurigny)
+  heureDepartRetour: '15:00',  // heure de départ retour (Aurigny → Cherbourg)
+  tolerance:   60,             // minutes (±1h)
+  vitesseFond: 5.5,            // nœuds
+  direction:   'both',         // 'aller' | 'retour' | 'both'
   annee:       new Date().getFullYear(),
-  marees:      []         // tableau d'extrêmes chargé depuis le JSON statique
+  marees:      []              // tableau d'extrêmes chargé depuis le JSON statique
 })
 
 // ─── Calcul du coefficient de marée (§3.4 des specs) ─────────────────────────
@@ -183,13 +184,15 @@ function grouperParJour(marees) {
 
 /**
  * Calcule les scores aller et retour pour tous les jours d'une année.
- * Appelé automatiquement quand etat.marees, etat.heureDepart ou etat.tolerance change.
+ * Appelé automatiquement quand etat.marees ou les heures de départ changent.
  * @param {Array} marees
- * @param {string} heureDepart - "HH:MM"
+ * @param {string} heureDepartAller  - "HH:MM" (Cherbourg → Aurigny)
+ * @param {string} heureDepartRetour - "HH:MM" (Aurigny → Cherbourg)
  * @returns {Map<string, JourData>}
  */
-function calculerDonneesAnnee(marees, heureDepart) {
-  const departMin = hhmm2min(heureDepart)
+function calculerDonneesAnnee(marees, heureDepartAller, heureDepartRetour) {
+  const departAllerMin  = hhmm2min(heureDepartAller)
+  const departRetourMin = hhmm2min(heureDepartRetour)
   const parJour = grouperParJour(marees)
   const resultat = new Map()
 
@@ -202,7 +205,7 @@ function calculerDonneesAnnee(marees, heureDepart) {
       if (e.type === 'Low') {
         // Aller : T_ideal = BM - 2h = BM - 120 min
         const idealMin = ((e.minutesLocales - 120) + 1440) % 1440
-        const score = calculerScore(departMin, idealMin, e.coeff)
+        const score = calculerScore(departAllerMin, idealMin, e.coeff)
         if (score > meilleurAller) {
           meilleurAller = score
           heureIdealAller = min2hhmm(idealMin)
@@ -211,7 +214,7 @@ function calculerDonneesAnnee(marees, heureDepart) {
       } else {
         // Retour : T_ideal = PM - 2h = PM - 120 min
         const idealMin = ((e.minutesLocales - 120) + 1440) % 1440
-        const score = calculerScore(departMin, idealMin, e.coeff)
+        const score = calculerScore(departRetourMin, idealMin, e.coeff)
         if (score > meilleurRetour) {
           meilleurRetour = score
           heureIdealRetour = min2hhmm(idealMin)
@@ -238,7 +241,7 @@ function calculerDonneesAnnee(marees, heureDepart) {
 
 export const donneesAnnee = computed(() => {
   if (!etat.marees.length) return new Map()
-  return calculerDonneesAnnee(etat.marees, etat.heureDepart)
+  return calculerDonneesAnnee(etat.marees, etat.heureDepartAller, etat.heureDepartRetour)
 })
 
 // ─── Calcul détaillé pour la vue d'un jour ───────────────────────────────────
