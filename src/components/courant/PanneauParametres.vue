@@ -11,6 +11,7 @@
     <div class="groupe">
       <label>Vitesse fond {{ etat.vitesseFond.toFixed(1) }} nœuds</label>
       <input type="range" min="3" max="10" step="0.5" v-model.number="etat.vitesseFond" />
+      <span class="aide">Utilisée pour estimer l'ETA et le courant au Raz à mi-traversée.</span>
     </div>
     <div class="groupe">
       <label>Direction</label>
@@ -68,6 +69,15 @@ input[type="range"] {
   width: 120px;
   padding: 0;
   cursor: pointer;
+}
+.aide {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-style: italic;
+  max-width: 160px;
+  line-height: 1.3;
+  text-transform: none;
+  letter-spacing: 0;
 }
 .boutons-direction {
   display: flex;
