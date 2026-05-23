@@ -34,16 +34,16 @@ defineProps({
 
 <style scoped>
 .carte {
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 1rem 1.25rem;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: var(--ombre);
 }
 .date {
   font-weight: 600;
   font-size: 1rem;
-  color: #1a6eb5;
+  color: var(--accent);
   margin-bottom: 0.75rem;
   text-transform: capitalize;
 }
@@ -59,26 +59,26 @@ defineProps({
 }
 .label {
   font-size: 0.75rem;
-  color: #888;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 .heure {
   font-size: 1.2rem;
   font-weight: 700;
-  color: #222;
+  color: var(--text);
 }
 .temp {
   font-size: 0.95rem;
-  color: #d04a00;
+  color: var(--temp);
 }
 .rosee {
   font-size: 0.85rem;
-  color: #3a8cbf;
+  color: var(--rosee);
 }
 .separateur {
   font-size: 1.5rem;
-  color: #bbb;
+  color: var(--border);
   flex-shrink: 0;
 }
 </style>

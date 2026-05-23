@@ -84,15 +84,16 @@ async function lancerAnalyse(modele, seuil) {
 .entete h1 {
   font-size: 1.8rem;
   margin: 0 0 0.25rem;
+  color: var(--text);
 }
 .sous-titre {
-  color: #555;
+  color: var(--text-muted);
   margin: 0 0 1.5rem;
   font-size: 0.95rem;
 }
 .panneau-parametres {
-  background: #f7f9fb;
-  border: 1px solid #e0e8f0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1.25rem 1.5rem;
   display: flex;
@@ -102,22 +103,22 @@ async function lancerAnalyse(modele, seuil) {
 }
 hr {
   border: none;
-  border-top: 1px solid #e0e8f0;
+  border-top: 1px solid var(--border);
   margin: 0;
 }
 .etat-info {
-  color: #555;
+  color: var(--text-muted);
   padding: 1rem 0;
 }
 .etat-erreur {
-  color: #b00;
-  background: #fff0f0;
-  border: 1px solid #ffcccc;
+  color: var(--erreur-text);
+  background: var(--erreur-bg);
+  border: 1px solid var(--erreur-bord);
   border-radius: 8px;
   padding: 1rem;
 }
 .resume {
-  color: #2a6e2a;
+  color: var(--succes);
   margin-bottom: 1rem;
 }
 .grille {

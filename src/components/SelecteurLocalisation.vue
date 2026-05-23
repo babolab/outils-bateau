@@ -62,7 +62,7 @@ onMounted(emettre)
 .localisation h3 {
   margin: 0 0 0.5rem;
   font-size: 0.95rem;
-  color: #555;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -77,24 +77,28 @@ label {
   flex-direction: column;
   gap: 0.25rem;
   font-size: 0.85rem;
-  color: #444;
+  color: var(--text-muted);
 }
 input[type="number"] {
   width: 110px;
   padding: 0.4rem 0.5rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 0.9rem;
+  background: var(--bg-input);
+  color: var(--text);
 }
 .btn-reset {
   padding: 0.4rem 0.8rem;
-  background: #f0f0f0;
-  border: 1px solid #ccc;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.85rem;
+  color: var(--text-muted);
 }
 .btn-reset:hover {
-  background: #e0e0e0;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 </style>

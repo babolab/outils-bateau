@@ -8,16 +8,9 @@
 </template>
 
 <style>
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
-  background: #f4f7fb;
-  color: #222;
-}
 .nav-principale {
-  background: #1a3a5c;
-  color: white;
+  background: #0a1220;
+  border-bottom: 1px solid var(--border);
   padding: 0.75rem 1.5rem;
   display: flex;
   align-items: center;
@@ -26,14 +19,15 @@ body {
 .nav-principale .logo {
   font-weight: 700;
   font-size: 1.05rem;
+  color: var(--text);
 }
 .nav-principale a {
-  color: #aad4f5;
+  color: var(--text-muted);
   text-decoration: none;
   font-size: 0.95rem;
 }
 .nav-principale a:hover,
 .nav-principale a.router-link-active {
-  color: white;
+  color: var(--text);
 }
 </style>

@@ -69,7 +69,7 @@ const seuilSelectionne = ref(10)
 }
 .groupe label {
   font-size: 0.85rem;
-  color: #555;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -80,9 +80,10 @@ const seuilSelectionne = ref(10)
 }
 .boutons button {
   padding: 0.4rem 0.8rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: #f8f8f8;
+  background: var(--bg-surface-2);
+  color: var(--text);
   cursor: pointer;
   font-size: 0.9rem;
   display: flex;
@@ -92,22 +93,22 @@ const seuilSelectionne = ref(10)
 }
 .boutons button .duree {
   font-size: 0.7rem;
-  color: #888;
+  color: var(--text-muted);
 }
 .boutons button.actif {
-  background: #1a6eb5;
+  background: var(--accent);
   color: white;
-  border-color: #1a6eb5;
+  border-color: var(--accent);
 }
 .boutons button.actif .duree {
-  color: #aad4f5;
+  color: rgba(255,255,255,0.7);
 }
 .boutons button:hover:not(.actif) {
-  background: #e8e8e8;
+  border-color: var(--accent);
 }
 .btn-analyser {
   padding: 0.55rem 1.4rem;
-  background: #1a6eb5;
+  background: var(--accent);
   color: white;
   border: none;
   border-radius: 6px;
@@ -116,6 +117,6 @@ const seuilSelectionne = ref(10)
   font-weight: 600;
 }
 .btn-analyser:hover {
-  background: #155a96;
+  background: var(--accent-hover);
 }
 </style>
