@@ -11,7 +11,10 @@
       <div class="separateur">→</div>
       <div class="col">
         <span class="label">Fin</span>
-        <span class="heure">{{ creneau.finHeure }}</span>
+        <span class="heure">
+          {{ creneau.finHeure }}
+          <span v-if="creneau.estJourSuivant" class="jour-suivant">J+1</span>
+        </span>
         <span class="temp">{{ creneau.finTemp.toFixed(1) }}°C</span>
         <span class="rosee">💧 {{ creneau.finRosee.toFixed(1) }}°C</span>
       </div>
@@ -80,5 +83,15 @@ defineProps({
   font-size: 1.5rem;
   color: var(--border);
   flex-shrink: 0;
+}
+.jour-suivant {
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: var(--accent);
+  color: white;
+  border-radius: 4px;
+  padding: 1px 4px;
+  vertical-align: middle;
+  margin-left: 0.3rem;
 }
 </style>

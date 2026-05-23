@@ -15,7 +15,7 @@ const MODELES = {
  * Regroupe un tableau de points horaires en créneaux consécutifs.
  * Un créneau est interrompu si l'écart entre deux points est > 1h.
  * @param {Array} points - Points horaires filtrés
- * @returns {Array} Tableau de créneaux { date, debutHeure, debutTemp, debutRosee, finHeure, finTemp, finRosee }
+ * @returns {Array} Tableau de créneaux { date, debutHeure, debutTemp, debutRosee, finHeure, finTemp, finRosee, estJourSuivant }
  */
 function regrouperEnCreneaux(points) {
   if (points.length === 0) return []
@@ -31,13 +31,15 @@ function regrouperEnCreneaux(points) {
     if (ecartMs > 3600000) {
       // Rupture détectée : on enregistre le créneau précédent
       creneaux.push({
-        date:        formaterDate(debut.time),
-        debutHeure:  formaterHeure(debut.time),
-        debutTemp:   debut.temperature_2m,
-        debutRosee:  debut.dewpoint_2m,
-        finHeure:    formaterHeure(precedent.time),
-        finTemp:     precedent.temperature_2m,
-        finRosee:    precedent.dewpoint_2m
+        date:           formaterDate(debut.time),
+        debutHeure:     formaterHeure(debut.time),
+        debutTemp:      debut.temperature_2m,
+        debutRosee:     debut.dewpoint_2m,
+        finHeure:       formaterHeure(precedent.time),
+        finTemp:        precedent.temperature_2m,
+        finRosee:       precedent.dewpoint_2m,
+        // Vrai si la fin tombe un jour calendaire différent du début (créneau qui passe minuit)
+        estJourSuivant: precedent.time.slice(0, 10) !== debut.time.slice(0, 10)
       })
       if (courant) debut = courant
     }
