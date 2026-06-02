@@ -126,8 +126,12 @@ def main():
     parser.add_argument('--annee', type=int, required=True)
     parser.add_argument('--cle', type=str, default='', help='Clé API WorldTides')
     parser.add_argument(
-        '--mode', choices=['api', 'synthese'], default='api',
-        help='api : données WorldTides (précises) | synthese : modèle simplifié (test)'
+        '--mode', choices=['api', 'synthese', 'scraping'], default='scraping',
+        help=(
+            'scraping : données maree.info/SHOM via session HTTP (recommandé, gratuit) | '
+            'api : données WorldTides (clé requise) | '
+            'synthese : modèle harmonique simplifié (hors-ligne, indicatif)'
+        )
     )
     args = parser.parse_args()
 
@@ -137,7 +141,18 @@ def main():
 
     print(f"Génération marées {args.annee} — mode : {args.mode}")
 
-    if args.mode == 'synthese':
+    if args.mode == 'scraping':
+        # Importer ici pour ne pas bloquer les autres modes si requests est absent
+        from scraper_maree_info import scraper_annee
+        dossier_data = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), '..', 'public', 'data'
+        )
+        chemin_json = os.path.join(dossier_data, f'marees-{args.annee}.json')
+        extremes, source = scraper_annee(args.annee, chemin_json=chemin_json)
+        if not extremes:
+            print("Aucune donnée récupérée.", file=sys.stderr)
+            sys.exit(1)
+    elif args.mode == 'synthese':
         extremes = generer_marees_synthese(args.annee)
         source = 'Modèle harmonique simplifié M2+S2 — données indicatives, non officielles'
     else:
