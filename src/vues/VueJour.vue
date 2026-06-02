@@ -27,23 +27,6 @@
         </div>
       </div>
 
-      <!-- Frise horaire interactive -->
-      <div class="section">
-        <h3>Phase du courant</h3>
-        <FriseHoraire
-          :dateStr="dateStr"
-          :minutesDepart="minutesDepart"
-          :heureDepart="heureDepart"
-          :extremes="jourData.extremes"
-          @update:minutesDepart="mettreAJourDepart"
-        />
-        <div class="legende-frise">
-          <span><span class="puce-frise" style="background:#2d6e2a"></span>Jusant (aller)</span>
-          <span><span class="puce-frise" style="background:#1a4a7a"></span>Flot (retour)</span>
-          <span><span class="puce-frise" style="background:#8a5a1a"></span>Renverse</span>
-        </div>
-      </div>
-
       <!-- Panneau de calcul détaillé -->
       <div class="section panneau-calcul">
         <h3>Calcul de traversée</h3>
@@ -121,7 +104,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import FriseHoraire from '../components/courant/FriseHoraire.vue'
 import {
   etat, donneesAnnee, scoreVersStatut,
   calculerDetailJour, hhmm2min, min2hhmm
@@ -151,11 +133,6 @@ watch(directionLocale, () => { minutesDepart.value = hhmm2min(heureDepart.value)
 watch(() => etat.heureDepartAller,  h => { if (directionLocale.value === 'aller')  minutesDepart.value = hhmm2min(h) })
 watch(() => etat.heureDepartRetour, h => { if (directionLocale.value === 'retour') minutesDepart.value = hhmm2min(h) })
 
-function mettreAJourDepart(min) {
-  minutesDepart.value = min
-  if (directionLocale.value === 'aller') etat.heureDepartAller  = min2hhmm(min)
-  else                                   etat.heureDepartRetour = min2hhmm(min)
-}
 function mettreAJourDepartHeure(hhmm) {
   if (directionLocale.value === 'aller') etat.heureDepartAller  = hhmm
   else                                   etat.heureDepartRetour = hhmm
@@ -248,10 +225,6 @@ const dateSuivante   = computed(() => dateDelta(+1))
   letter-spacing: 0.05em;
   color: var(--text-muted);
 }
-.legende-frise { display: flex; gap: 1rem; font-size: 0.78rem; color: var(--text-muted); flex-wrap: wrap; }
-.legende-frise span { display: flex; align-items: center; gap: 0.4rem; }
-.puce-frise { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
-
 /* Panneau calcul */
 .champs-calcul { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; }
 .champs-calcul label {

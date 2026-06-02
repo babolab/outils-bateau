@@ -21,6 +21,9 @@
     <!-- État chargement / erreur / source -->
     <div v-if="chargement" class="etat-info">⏳ Chargement des données de marée…</div>
     <div v-else-if="erreur" class="etat-erreur">⚠️ {{ erreur }}</div>
+    <div v-else-if="sourceMarees === 'encotentin'" class="etat-harmonique">
+      🌊 Mois courant : données SHOM via encotentin.fr. Reste de l'année : modèle harmonique M2+S2 (±10–30 min).
+    </div>
     <div v-else-if="sourceMarees === 'harmonique'" class="etat-harmonique">
       ⚙️ Données calculées localement (modèle harmonique M2+S2, précision ±10–30 min).
       Pour des données précises, exécutez <code>scripts/recuperer_marees.py --annee {{ etat.annee }}</code>.
