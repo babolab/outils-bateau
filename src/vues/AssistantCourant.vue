@@ -18,9 +18,13 @@
     <!-- Panneau paramètres rapides (heure départ, tolérance, vitesse, direction) -->
     <PanneauParametres />
 
-    <!-- État chargement / erreur -->
+    <!-- État chargement / erreur / source -->
     <div v-if="chargement" class="etat-info">⏳ Chargement des données de marée…</div>
     <div v-else-if="erreur" class="etat-erreur">⚠️ {{ erreur }}</div>
+    <div v-else-if="sourceMarees === 'harmonique'" class="etat-harmonique">
+      ⚙️ Données calculées localement (modèle harmonique M2+S2, précision ±10–30 min).
+      Pour des données précises, exécutez <code>scripts/recuperer_marees.py --annee {{ etat.annee }}</code>.
+    </div>
 
     <!-- Calendrier annuel -->
     <div v-else-if="etat.marees.length" class="calendrier-annuel">
@@ -71,6 +75,7 @@ import { chargerMarees, chargerAnneesDisponibles } from '../composables/utiliser
 const chargement = ref(false)
 const erreur = ref(null)
 const anneesDisponibles = ref([])
+const sourceMarees = ref(null)  // 'json' | 'harmonique' | null
 
 const joursSemaine = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
@@ -85,8 +90,11 @@ const legendeItems = [
 async function chargerAnnee() {
   chargement.value = true
   erreur.value = null
+  sourceMarees.value = null
   try {
-    etat.marees = await chargerMarees(etat.annee)
+    const resultat = await chargerMarees(etat.annee)
+    etat.marees = resultat.extremes
+    sourceMarees.value = resultat.source
   } catch (e) {
     erreur.value = e.message
     etat.marees = []
@@ -96,9 +104,14 @@ async function chargerAnnee() {
 }
 
 onMounted(async () => {
+  const anneesCourante = new Date().getFullYear()
   anneesDisponibles.value = await chargerAnneesDisponibles()
-  if (!anneesDisponibles.value.length) anneesDisponibles.value = [etat.annee]
-  if (!anneesDisponibles.value.includes(etat.annee)) etat.annee = anneesDisponibles.value[0]
+  // Toujours proposer l'année courante et les deux suivantes (modèle harmonique en fallback)
+  for (const a of [anneesCourante, anneesCourante + 1, anneesCourante + 2]) {
+    if (!anneesDisponibles.value.includes(a)) anneesDisponibles.value.push(a)
+  }
+  anneesDisponibles.value.sort()
+  if (!anneesDisponibles.value.includes(etat.annee)) etat.annee = anneesCourante
   await chargerAnnee()
 })
 
@@ -170,6 +183,20 @@ const moisAnnee = computed(() => {
   border: 1px solid var(--erreur-bord);
   border-radius: 8px;
   padding: 1rem;
+}
+.etat-harmonique {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+}
+.etat-harmonique code {
+  background: var(--bg-surface-2);
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.8rem;
 }
 /* Grille des 12 mois */
 .calendrier-annuel {

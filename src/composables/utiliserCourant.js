@@ -12,6 +12,37 @@ export const etat = reactive({
   marees:      []              // tableau d'extrêmes chargé depuis le JSON statique
 })
 
+// ─── Fenêtres de courant favorables (source: livres des courants SHOM) ────────
+
+// Offsets en minutes par rapport à la PM de Cherbourg
+const ALLER_FENETRE_DEBUT  =  80   // PM + 1h20
+const ALLER_FENETRE_FIN    = 200   // PM + 3h20
+const RETOUR_FENETRE_DEBUT = -220  // PM − 3h40
+const RETOUR_FENETRE_FIN   = -160  // PM − 2h40
+
+/**
+ * Heure idéale de départ aller (en minutes après la PM) selon la vitesse.
+ * Plus le bateau est lent, plus il faut coller au début de la fenêtre.
+ * @param {number} vitesse - nœuds
+ * @returns {number}
+ */
+function idealAllerMin(vitesse) {
+  if (vitesse < 4) return ALLER_FENETRE_DEBUT  // coller au plus tôt
+  if (vitesse < 6) return 120
+  return 140
+}
+
+/**
+ * Heure idéale de départ retour (en minutes avant la PM, valeur négative) selon la vitesse.
+ * @param {number} vitesse - nœuds
+ * @returns {number}
+ */
+function idealRetourMin(vitesse) {
+  if (vitesse < 4) return RETOUR_FENETRE_DEBUT  // coller au plus tôt
+  if (vitesse < 6) return -190
+  return RETOUR_FENETRE_FIN
+}
+
 // ─── Calcul du coefficient de marée (§3.4 des specs) ─────────────────────────
 
 /**
@@ -126,6 +157,32 @@ export function calculerScore(departMinutes, idealMinutes, coeff) {
 }
 
 /**
+ * Vérifie si departMin est dans la fenêtre [debutMin, finMin] en gérant le passage à minuit.
+ * @param {number} departMin
+ * @param {number} debutMin
+ * @param {number} finMin
+ * @returns {boolean}
+ */
+function estDansFenetre(departMin, debutMin, finMin) {
+  if (debutMin <= finMin) return departMin >= debutMin && departMin <= finMin
+  return departMin >= debutMin || departMin <= finMin
+}
+
+/**
+ * Score (0–100) avec pénalité ×0,3 si le départ est hors fenêtre SHOM.
+ * @param {number} departMin
+ * @param {number} idealMin
+ * @param {number} coeff
+ * @param {number} debutFenetre - minutes
+ * @param {number} finFenetre - minutes
+ * @returns {number}
+ */
+export function calculerScoreAvecFenetre(departMin, idealMin, coeff, debutFenetre, finFenetre) {
+  const score = calculerScore(departMin, idealMin, coeff)
+  return estDansFenetre(departMin, debutFenetre, finFenetre) ? score : Math.round(score * 0.3)
+}
+
+/**
  * Détermine le label et la couleur CSS selon le score (§4.4 des specs).
  * @param {number} score
  * @returns {{ label: string, variable: string }}
@@ -190,7 +247,7 @@ function grouperParJour(marees) {
  * @param {string} heureDepartRetour - "HH:MM" (Aurigny → Cherbourg)
  * @returns {Map<string, JourData>}
  */
-function calculerDonneesAnnee(marees, heureDepartAller, heureDepartRetour) {
+function calculerDonneesAnnee(marees, heureDepartAller, heureDepartRetour, vitesseFond) {
   const departAllerMin  = hhmm2min(heureDepartAller)
   const departRetourMin = hhmm2min(heureDepartRetour)
   const parJour = grouperParJour(marees)
@@ -202,23 +259,28 @@ function calculerDonneesAnnee(marees, heureDepartAller, heureDepartRetour) {
     let nuitAller = false, nuitRetour = false
 
     for (const e of extremes) {
-      if (e.type === 'Low') {
-        // Aller : T_ideal = BM - 2h = BM - 120 min
-        const idealMin = ((e.minutesLocales - 120) + 1440) % 1440
-        const score = calculerScore(departAllerMin, idealMin, e.coeff)
-        if (score > meilleurAller) {
-          meilleurAller = score
-          heureIdealAller = min2hhmm(idealMin)
-          nuitAller = estNuit(idealMin)
+      if (e.type === 'High') {
+        // Aller et retour basés sur la PM (fenêtres SHOM)
+        const offAller = idealAllerMin(vitesseFond)
+        const idealA   = (e.minutesLocales + offAller  + 1440) % 1440
+        const fADebut  = (e.minutesLocales + ALLER_FENETRE_DEBUT  + 1440) % 1440
+        const fAFin    = (e.minutesLocales + ALLER_FENETRE_FIN    + 1440) % 1440
+        const scoreA   = calculerScoreAvecFenetre(departAllerMin, idealA, e.coeff, fADebut, fAFin)
+        if (scoreA > meilleurAller) {
+          meilleurAller   = scoreA
+          heureIdealAller = min2hhmm(idealA)
+          nuitAller       = estNuit(idealA)
         }
-      } else {
-        // Retour : T_ideal = PM - 2h = PM - 120 min
-        const idealMin = ((e.minutesLocales - 120) + 1440) % 1440
-        const score = calculerScore(departRetourMin, idealMin, e.coeff)
-        if (score > meilleurRetour) {
-          meilleurRetour = score
-          heureIdealRetour = min2hhmm(idealMin)
-          nuitRetour = estNuit(idealMin)
+
+        const offRetour = idealRetourMin(vitesseFond)
+        const idealR    = (e.minutesLocales + offRetour + 1440) % 1440
+        const fRDebut   = (e.minutesLocales + RETOUR_FENETRE_DEBUT + 1440) % 1440
+        const fRFin     = (e.minutesLocales + RETOUR_FENETRE_FIN   + 1440) % 1440
+        const scoreR    = calculerScoreAvecFenetre(departRetourMin, idealR, e.coeff, fRDebut, fRFin)
+        if (scoreR > meilleurRetour) {
+          meilleurRetour   = scoreR
+          heureIdealRetour = min2hhmm(idealR)
+          nuitRetour       = estNuit(idealR)
         }
       }
     }
@@ -241,7 +303,9 @@ function calculerDonneesAnnee(marees, heureDepartAller, heureDepartRetour) {
 
 export const donneesAnnee = computed(() => {
   if (!etat.marees.length) return new Map()
-  return calculerDonneesAnnee(etat.marees, etat.heureDepartAller, etat.heureDepartRetour)
+  return calculerDonneesAnnee(
+    etat.marees, etat.heureDepartAller, etat.heureDepartRetour, etat.vitesseFond
+  )
 })
 
 // ─── Calcul détaillé pour la vue d'un jour ───────────────────────────────────
@@ -258,13 +322,19 @@ export function calculerDetailJour(dateStr, departMinutes, direction, vitesseFon
   const jourData = donneesAnnee.value.get(dateStr)
   if (!jourData) return null
 
-  // Sélectionne l'extrême de référence selon la direction
-  const typeRef = direction === 'aller' ? 'Low' : 'High'
+  // Les deux directions sont basées sur la PM (fenêtres SHOM)
   const extreme = jourData.extremes
-    .filter(e => e.type === typeRef)
+    .filter(e => e.type === 'High')
     .reduce((best, e) => {
-      const idealMin = ((e.minutesLocales - 120) + 1440) % 1440
-      const s = calculerScore(departMinutes, idealMin, e.coeff)
+      const offset   = direction === 'aller' ? idealAllerMin(vitesseFond) : idealRetourMin(vitesseFond)
+      const idealMin = (e.minutesLocales + offset + 1440) % 1440
+      const fDebut   = direction === 'aller'
+        ? (e.minutesLocales + ALLER_FENETRE_DEBUT  + 1440) % 1440
+        : (e.minutesLocales + RETOUR_FENETRE_DEBUT + 1440) % 1440
+      const fFin     = direction === 'aller'
+        ? (e.minutesLocales + ALLER_FENETRE_FIN  + 1440) % 1440
+        : (e.minutesLocales + RETOUR_FENETRE_FIN + 1440) % 1440
+      const s = calculerScoreAvecFenetre(departMinutes, idealMin, e.coeff, fDebut, fFin)
       return (!best || s > best.score) ? { ...e, score: s, idealMin } : best
     }, null)
 
@@ -294,11 +364,12 @@ export function calculerDetailJour(dateStr, departMinutes, direction, vitesseFon
   // Écart départ/idéal pour le commentaire
   const ecartIdeal = ecartCirculaire(departMinutes, idealMin)
   const sensEcart = ((departMinutes - idealMin + 1440) % 1440) < 720 ? 'après' : 'avant'
-  const sensDirection = direction === 'aller' ? 'la BM' : 'la PM'
   const { label: statut } = scoreVersStatut(score)
+  const offsetMin  = direction === 'aller' ? idealAllerMin(vitesseFond) : idealRetourMin(vitesseFond)
+  const signOffset = offsetMin >= 0 ? `+${offsetMin}` : `${offsetMin}`
 
   const commentaire =
-    `Départ ${Math.round(ecartIdeal)}min ${sensEcart} l'idéal (${min2hhmm(idealMin)}, soit −2h ${sensDirection}). ` +
+    `Départ ${Math.round(ecartIdeal)}min ${sensEcart} l'idéal (${min2hhmm(idealMin)}, soit PM${signOffset}min). ` +
     `Courant estimé au Raz : ${vitesseRaz} nœuds. Créneau ${statut.toLowerCase()}.`
 
   return {

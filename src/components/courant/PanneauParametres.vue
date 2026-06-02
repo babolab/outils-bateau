@@ -17,7 +17,7 @@
     <div class="groupe">
       <label>Vitesse fond {{ etat.vitesseFond.toFixed(1) }} nœuds</label>
       <input type="range" min="3" max="10" step="0.5" v-model.number="etat.vitesseFond" />
-      <span class="aide">Utilisée pour estimer l'ETA et le courant au Raz à mi-traversée.</span>
+      <span class="aide">Affecte l'heure idéale et le score. &lt; 4 nœuds : créneau réduit au début de la fenêtre.</span>
     </div>
     <div class="groupe">
       <label>Direction</label>

@@ -1,31 +1,38 @@
 /**
  * Chargement des données de marée depuis les fichiers JSON statiques du dépôt.
- * Aucun appel API à chaque visite : les données sont poussées par le mainteneur
- * via scripts/recuperer_marees.py, puis servies comme assets statiques.
+ * Fallback automatique sur le modèle harmonique M2+S2 si le JSON est absent.
+ * Les données JSON sont poussées par le mainteneur via scripts/recuperer_marees.py.
  */
+
+import { genererMareesHarmonique } from './utiliserMareesHarmonique.js'
 
 // Cache mémoire pour éviter de recharger plusieurs fois la même année
 const cache = {}
 
 /**
  * Charge les extrêmes de marée pour une année donnée.
+ * Priorité : JSON statique (précis) → modèle harmonique M2+S2 (indicatif, ±10–30 min).
  * @param {number} annee
- * @returns {Promise<Array>} Tableau de { dt, type, height }
+ * @returns {Promise<{ extremes: Array, source: 'json'|'harmonique' }>}
  */
 export async function chargerMarees(annee) {
   if (cache[annee]) return cache[annee]
-  // import.meta.env.BASE_URL gère le préfixe /outils-bateau/ en production
-  const url = `${import.meta.env.BASE_URL}data/marees-${annee}.json`
-  const response = await fetch(url)
-  if (!response.ok) {
-    throw new Error(
-      `Données de marée ${annee} non disponibles. ` +
-      `Exécutez scripts/recuperer_marees.py --annee ${annee} et poussez le résultat.`
-    )
-  }
-  const data = await response.json()
-  cache[annee] = data.extremes
-  return data.extremes
+
+  // 1. Tentative depuis le JSON statique (données précises)
+  try {
+    const url = `${import.meta.env.BASE_URL}data/marees-${annee}.json`
+    const response = await fetch(url)
+    if (response.ok) {
+      const data = await response.json()
+      cache[annee] = { extremes: data.extremes, source: 'json' }
+      return cache[annee]
+    }
+  } catch { /* réseau indisponible → fallback harmonique */ }
+
+  // 2. Fallback : modèle harmonique M2+S2 calibré sur Cherbourg (gratuit, hors-ligne)
+  const extremes = genererMareesHarmonique(annee)
+  cache[annee] = { extremes, source: 'harmonique' }
+  return cache[annee]
 }
 
 /**
