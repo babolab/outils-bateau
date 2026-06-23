@@ -15,7 +15,18 @@
       </div>
     </header>
 
-    <!-- Panneau paramètres rapides (heure départ, tolérance, vitesse, direction) -->
+    <!-- Explication du principe des créneaux -->
+    <p class="intro">
+      Chaque jour compte généralement deux marées (pleines mers). Autour de chaque PM s'ouvre
+      une fenêtre de courant favorable dans le Raz Blanchard&nbsp;: environ <strong>1h20 à 3h20 après
+      la PM</strong> pour l'aller (jusant), <strong>2h40 à 3h40 avant la PM</strong> pour le retour (flot).
+      Un jour n'apparaît en vert que si cette fenêtre tombe dans la <strong>plage de départ</strong>
+      que vous fixez ci-dessous&nbsp;; le score combine alors le coefficient de marée et la proximité
+      de l'heure idéale. La couleur affichée retient la meilleure des deux marées du jour — ouvrez un
+      jour pour voir le détail des deux créneaux (aller et retour).
+    </p>
+
+    <!-- Panneau paramètres rapides (plages de départ, vitesse, direction) -->
     <PanneauParametres />
 
     <!-- État chargement / erreur / source -->
@@ -56,7 +67,6 @@
         <span class="legende-couleur" :style="{ background: item.couleur }"></span>
         {{ item.label }}
       </span>
-      <span class="legende-item">🌙 Créneau nocturne</span>
     </div>
 
     <!-- Avertissement légal (§8.1 des specs) -->
@@ -162,6 +172,17 @@ const moisAnnee = computed(() => {
 }
 .entete h1 { font-size: 1.6rem; margin: 0 0 0.2rem; }
 .sous-titre { color: var(--text-muted); margin: 0; font-size: 0.9rem; }
+.intro {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.85rem 1.1rem;
+}
+.intro strong { color: var(--text); font-weight: 600; }
 .label-annee {
   display: flex;
   flex-direction: column;
