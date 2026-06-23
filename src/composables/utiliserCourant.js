@@ -4,11 +4,11 @@ import { reactive, computed } from 'vue'
 
 export const etat = reactive({
   // Plage horaire souhaitée pour le départ aller (Cherbourg → Aurigny)
-  heureDepartAllerDebut:  '07:30',
-  heureDepartAllerFin:    '09:30',
+  heureDepartAllerDebut:  '07:00',
+  heureDepartAllerFin:    '10:30',
   // Plage horaire souhaitée pour le départ retour (Aurigny → Cherbourg)
-  heureDepartRetourDebut: '14:00',
-  heureDepartRetourFin:   '16:00',
+  heureDepartRetourDebut: '12:00',
+  heureDepartRetourFin:   '18:00',
   vitesseFond: 5.5,            // nœuds
   direction:   'both',         // 'aller' | 'retour' | 'both'
   annee:       new Date().getFullYear(),
