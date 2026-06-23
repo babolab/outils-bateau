@@ -24,6 +24,10 @@
       que vous fixez ci-dessous&nbsp;; le score combine alors le coefficient de marée et la proximité
       de l'heure idéale. La couleur affichée retient la meilleure des deux marées du jour — ouvrez un
       jour pour voir le détail des deux créneaux (aller et retour).
+      <strong>Élargissez ou décalez vos plages</strong> pour révéler d'autres créneaux possibles&nbsp;:
+      les fenêtres de courant se décalent d'environ 50&nbsp;min chaque jour. Enfin, <strong>passer
+      une nuit sur place</strong> dissocie l'aller et le retour sur deux jours et ouvre nettement plus
+      d'opportunités de traversée qu'un aller-retour dans la journée.
     </p>
 
     <!-- Panneau paramètres rapides (plages de départ, vitesse, direction) -->
