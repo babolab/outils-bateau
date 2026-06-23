@@ -66,10 +66,12 @@ const tooltip = computed(() => {
   if (!props.jourData) return ''
   const d = props.jourData
   const parties = []
-  if (d.heureIdealAller)  parties.push(`Aller : idéal ${d.heureIdealAller} — score ${d.scoreAller}`)
-  if (d.heureIdealRetour) parties.push(`Retour : idéal ${d.heureIdealRetour} — score ${d.scoreRetour}`)
-  const coeffMoyen = d.extremes.length ? d.extremes[0].coeff : '?'
-  parties.push(`Coeff. ~${coeffMoyen}`)
+  // Détaille un créneau par marée du jour (généralement deux PM).
+  const fmt = c => `${c.heureIdeal} (PM ${c.pmHeure}, coeff ${c.coeff}, score ${c.score})${c.nuit ? ' 🌙' : ''}`
+  if (props.direction !== 'retour' && d.creneauxAller?.length)
+    parties.push('Aller : ' + d.creneauxAller.map(fmt).join(' · '))
+  if (props.direction !== 'aller' && d.creneauxRetour?.length)
+    parties.push('Retour : ' + d.creneauxRetour.map(fmt).join(' · '))
   return parties.join('\n')
 })
 

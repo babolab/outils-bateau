@@ -20,6 +20,9 @@ const ALLER_FENETRE_FIN    = 200   // PM + 3h20
 const RETOUR_FENETRE_DEBUT = -220  // PM − 3h40
 const RETOUR_FENETRE_FIN   = -160  // PM − 2h40
 
+// Pénalité douce appliquée au score d'un créneau dont l'heure idéale tombe de nuit.
+const FACTEUR_NUIT = 0.85
+
 /**
  * Heure idéale de départ aller (en minutes après la PM) selon la vitesse.
  * Plus le bateau est lent, plus il faut coller au début de la fenêtre.
@@ -240,60 +243,79 @@ function grouperParJour(marees) {
 }
 
 /**
- * Calcule les scores aller et retour pour tous les jours d'une année.
- * Appelé automatiquement quand etat.marees ou les heures de départ changent.
+ * Construit le créneau de passage d'une marée (PM) pour une direction donnée.
+ * Chaque marée du jour génère son propre créneau idéal : le score reflète la
+ * qualité du courant à l'heure idéale (pondérée par le coefficient), avec une
+ * pénalité douce si ce créneau idéal tombe de nuit.
+ * @param {Object} pm - extrême PM enrichi { minutesLocales, heureLocale, coeff }
+ * @param {string} direction - 'aller' | 'retour'
+ * @param {number} vitesse - nœuds
+ * @returns {Object}
+ */
+function creneauPourMaree(pm, direction, vitesse) {
+  const offset      = direction === 'aller' ? idealAllerMin(vitesse) : idealRetourMin(vitesse)
+  const debutOffset = direction === 'aller' ? ALLER_FENETRE_DEBUT    : RETOUR_FENETRE_DEBUT
+  const finOffset   = direction === 'aller' ? ALLER_FENETRE_FIN      : RETOUR_FENETRE_FIN
+
+  const idealMin     = (pm.minutesLocales + offset      + 1440) % 1440
+  const debutFenetre = (pm.minutesLocales + debutOffset + 1440) % 1440
+  const finFenetre   = (pm.minutesLocales + finOffset   + 1440) % 1440
+
+  const nuit  = estNuit(idealMin)
+  // Score à l'heure idéale = qualité intrinsèque de la marée (coefficient).
+  const score = Math.round(calculerScore(idealMin, idealMin, pm.coeff) * (nuit ? FACTEUR_NUIT : 1))
+
+  return {
+    pmHeure:    pm.heureLocale,
+    pmMinutes:  pm.minutesLocales,
+    heureIdeal: min2hhmm(idealMin),
+    idealMin,
+    debutFenetre,
+    finFenetre,
+    coeff: pm.coeff,
+    score,
+    nuit
+  }
+}
+
+/** Retourne le créneau au meilleur score d'une liste (ou null si vide). */
+function meilleurCreneau(creneaux) {
+  return creneaux.reduce((best, c) => (!best || c.score > best.score ? c : best), null)
+}
+
+/**
+ * Calcule, pour chaque jour de l'année, un créneau de passage par marée du jour
+ * (généralement deux PM), dans les deux directions. Les champs de synthèse
+ * (scoreAller, heureIdealAller…) reflètent la meilleure des marées du jour.
  * @param {Array} marees
- * @param {string} heureDepartAller  - "HH:MM" (Cherbourg → Aurigny)
- * @param {string} heureDepartRetour - "HH:MM" (Aurigny → Cherbourg)
+ * @param {number} vitesseFond - nœuds
  * @returns {Map<string, JourData>}
  */
-function calculerDonneesAnnee(marees, heureDepartAller, heureDepartRetour, vitesseFond) {
-  const departAllerMin  = hhmm2min(heureDepartAller)
-  const departRetourMin = hhmm2min(heureDepartRetour)
+function calculerDonneesAnnee(marees, vitesseFond) {
   const parJour = grouperParJour(marees)
   const resultat = new Map()
 
   for (const [date, extremes] of parJour) {
-    let meilleurAller = 0, meilleurRetour = 0
-    let heureIdealAller = null, heureIdealRetour = null
-    let nuitAller = false, nuitRetour = false
+    const pms = extremes.filter(e => e.type === 'High')
+    // Un créneau par marée (PM) du jour, pour chaque direction.
+    const creneauxAller  = pms.map(pm => creneauPourMaree(pm, 'aller',  vitesseFond))
+    const creneauxRetour = pms.map(pm => creneauPourMaree(pm, 'retour', vitesseFond))
 
-    for (const e of extremes) {
-      if (e.type === 'High') {
-        // Aller et retour basés sur la PM (fenêtres SHOM)
-        const offAller = idealAllerMin(vitesseFond)
-        const idealA   = (e.minutesLocales + offAller  + 1440) % 1440
-        const fADebut  = (e.minutesLocales + ALLER_FENETRE_DEBUT  + 1440) % 1440
-        const fAFin    = (e.minutesLocales + ALLER_FENETRE_FIN    + 1440) % 1440
-        const scoreA   = calculerScoreAvecFenetre(departAllerMin, idealA, e.coeff, fADebut, fAFin)
-        if (scoreA > meilleurAller) {
-          meilleurAller   = scoreA
-          heureIdealAller = min2hhmm(idealA)
-          nuitAller       = estNuit(idealA)
-        }
-
-        const offRetour = idealRetourMin(vitesseFond)
-        const idealR    = (e.minutesLocales + offRetour + 1440) % 1440
-        const fRDebut   = (e.minutesLocales + RETOUR_FENETRE_DEBUT + 1440) % 1440
-        const fRFin     = (e.minutesLocales + RETOUR_FENETRE_FIN   + 1440) % 1440
-        const scoreR    = calculerScoreAvecFenetre(departRetourMin, idealR, e.coeff, fRDebut, fRFin)
-        if (scoreR > meilleurRetour) {
-          meilleurRetour   = scoreR
-          heureIdealRetour = min2hhmm(idealR)
-          nuitRetour       = estNuit(idealR)
-        }
-      }
-    }
+    const meilleurAller  = meilleurCreneau(creneauxAller)
+    const meilleurRetour = meilleurCreneau(creneauxRetour)
 
     resultat.set(date, {
       date,
       extremes,
-      scoreAller: meilleurAller,
-      scoreRetour: meilleurRetour,
-      heureIdealAller,
-      heureIdealRetour,
-      nuitAller,
-      nuitRetour
+      creneauxAller,
+      creneauxRetour,
+      // Synthèse : meilleure des marées du jour (calendrier + badges).
+      scoreAller:       meilleurAller?.score ?? 0,
+      scoreRetour:      meilleurRetour?.score ?? 0,
+      heureIdealAller:  meilleurAller?.heureIdeal ?? null,
+      heureIdealRetour: meilleurRetour?.heureIdeal ?? null,
+      nuitAller:        meilleurAller?.nuit ?? false,
+      nuitRetour:       meilleurRetour?.nuit ?? false
     })
   }
   return resultat
@@ -303,9 +325,7 @@ function calculerDonneesAnnee(marees, heureDepartAller, heureDepartRetour, vites
 
 export const donneesAnnee = computed(() => {
   if (!etat.marees.length) return new Map()
-  return calculerDonneesAnnee(
-    etat.marees, etat.heureDepartAller, etat.heureDepartRetour, etat.vitesseFond
-  )
+  return calculerDonneesAnnee(etat.marees, etat.vitesseFond)
 })
 
 // ─── Calcul détaillé pour la vue d'un jour ───────────────────────────────────
@@ -322,32 +342,26 @@ export function calculerDetailJour(dateStr, departMinutes, direction, vitesseFon
   const jourData = donneesAnnee.value.get(dateStr)
   if (!jourData) return null
 
-  // Les deux directions sont basées sur la PM (fenêtres SHOM)
-  const extreme = jourData.extremes
-    .filter(e => e.type === 'High')
-    .reduce((best, e) => {
-      const offset   = direction === 'aller' ? idealAllerMin(vitesseFond) : idealRetourMin(vitesseFond)
-      const idealMin = (e.minutesLocales + offset + 1440) % 1440
-      const fDebut   = direction === 'aller'
-        ? (e.minutesLocales + ALLER_FENETRE_DEBUT  + 1440) % 1440
-        : (e.minutesLocales + RETOUR_FENETRE_DEBUT + 1440) % 1440
-      const fFin     = direction === 'aller'
-        ? (e.minutesLocales + ALLER_FENETRE_FIN  + 1440) % 1440
-        : (e.minutesLocales + RETOUR_FENETRE_FIN + 1440) % 1440
-      const s = calculerScoreAvecFenetre(departMinutes, idealMin, e.coeff, fDebut, fFin)
-      return (!best || s > best.score) ? { ...e, score: s, idealMin } : best
-    }, null)
+  // Les deux marées du jour offrent chacune un créneau : on cible celle dont
+  // l'heure idéale est la plus proche de l'heure saisie, ce qui permet de
+  // planifier indifféremment l'une ou l'autre marée (saisir une heure du matin
+  // vise la PM du matin, une heure du soir vise la PM du soir).
+  const creneaux = direction === 'aller' ? jourData.creneauxAller : jourData.creneauxRetour
+  if (!creneaux.length) return null
 
-  if (!extreme) return null
+  const creneau = creneaux.reduce((best, c) => {
+    const ecart = ecartCirculaire(departMinutes, c.idealMin)
+    return (!best || ecart < best.ecart) ? { ...c, ecart } : best
+  }, null)
 
-  const idealMin = extreme.idealMin
-  const score = extreme.score
-  const coeff = extreme.coeff
+  const idealMin = creneau.idealMin
+  const coeff = creneau.coeff
+  const score = calculerScoreAvecFenetre(departMinutes, idealMin, coeff, creneau.debutFenetre, creneau.finFenetre)
   const vMax = vitesseMaxRaz(coeff)
 
   // Vitesse du courant au moment du départ (modèle sinusoïdal §4.3)
-  // T_renverse ≈ extrême - 3h = extrême.minutesLocales - 180 min
-  const T_renverse = ((extreme.minutesLocales - 180) + 1440) % 1440
+  // T_renverse ≈ PM - 3h = pmMinutes - 180 min
+  const T_renverse = ((creneau.pmMinutes - 180) + 1440) % 1440
   const demiCycle = 180  // minutes (3h)
   const ecartDepart = ecartCirculaire(departMinutes, T_renverse)
   const vitesseDepart = parseFloat((vMax * Math.sin(Math.PI * Math.min(ecartDepart, demiCycle) / demiCycle)).toFixed(1))
@@ -380,6 +394,7 @@ export function calculerDetailJour(dateStr, departMinutes, direction, vitesseFon
     vitesseRaz,
     etaHeure,
     heureIdeal: min2hhmm(idealMin),
+    pmCiblee: creneau.pmHeure,
     commentaire,
     nuit: estNuit(idealMin)
   }

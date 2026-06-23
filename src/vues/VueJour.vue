@@ -27,6 +27,24 @@
         </div>
       </div>
 
+      <!-- Créneaux de passage : un par marée du jour -->
+      <div class="section">
+        <h3>Créneaux de passage</h3>
+        <div class="blocs-creneaux">
+          <div v-for="sens in sensAffichés" :key="sens" class="bloc-creneaux">
+            <span class="bloc-titre">{{ sens === 'aller' ? 'Aller →' : '← Retour' }}</span>
+            <ul class="liste-creneaux">
+              <li v-for="(c, i) in creneauxDe(sens)" :key="i" class="creneau">
+                <span class="creneau-puce" :style="{ background: `var(${scoreVersStatut(c.score).variable})` }"></span>
+                <span class="creneau-ideal">{{ c.heureIdeal }}</span>
+                <span class="creneau-icone">{{ c.nuit ? '🌙' : '☀️' }}</span>
+                <span class="creneau-meta">PM {{ c.pmHeure }} · coeff {{ c.coeff }} · score {{ c.score }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       <!-- Panneau de calcul détaillé -->
       <div class="section panneau-calcul">
         <h3>Calcul de traversée</h3>
@@ -51,7 +69,7 @@
         <div v-if="detail" class="resultats-calcul">
           <div class="resultat-ligne">
             <span>Heure idéale de départ</span>
-            <strong>{{ detail.heureIdeal }}</strong>
+            <strong>{{ detail.heureIdeal }} <span class="pm-ciblee">(PM {{ detail.pmCiblee }})</span></strong>
           </div>
           <div class="resultat-ligne">
             <span>ETA estimé à destination</span>
@@ -150,6 +168,12 @@ const sensAffichés = computed(() => {
   return [etat.direction]
 })
 
+/** Liste des créneaux (un par marée du jour) pour une direction donnée */
+function creneauxDe(sens) {
+  if (!jourData.value) return []
+  return sens === 'aller' ? jourData.value.creneauxAller : jourData.value.creneauxRetour
+}
+
 /** Navigation entre jours */
 function decalerJour(delta) {
   const d = new Date(dateStr.value)
@@ -225,6 +249,30 @@ const dateSuivante   = computed(() => dateDelta(+1))
   letter-spacing: 0.05em;
   color: var(--text-muted);
 }
+/* Créneaux de passage */
+.blocs-creneaux { display: flex; flex-wrap: wrap; gap: 1rem; }
+.bloc-creneaux {
+  flex: 1 1 260px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+.bloc-titre {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+.liste-creneaux { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+.creneau { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+.creneau-puce { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.creneau-ideal { font-weight: 700; font-variant-numeric: tabular-nums; }
+.creneau-icone { font-size: 0.85rem; }
+.creneau-meta { color: var(--text-muted); font-size: 0.78rem; margin-left: auto; }
+.pm-ciblee { font-weight: 400; color: var(--text-muted); font-size: 0.82rem; }
+
 /* Panneau calcul */
 .champs-calcul { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; }
 .champs-calcul label {
