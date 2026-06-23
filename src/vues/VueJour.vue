@@ -34,11 +34,12 @@
           <div v-for="sens in sensAffichés" :key="sens" class="bloc-creneaux">
             <span class="bloc-titre">{{ sens === 'aller' ? 'Aller →' : '← Retour' }}</span>
             <ul class="liste-creneaux">
-              <li v-for="(c, i) in creneauxDe(sens)" :key="i" class="creneau">
+              <li v-for="(c, i) in creneauxDe(sens)" :key="i" class="creneau" :class="{ 'creneau--hors-plage': !c.realisable }">
                 <span class="creneau-puce" :style="{ background: `var(${scoreVersStatut(c.score).variable})` }"></span>
-                <span class="creneau-ideal">{{ c.heureIdeal }}</span>
+                <span class="creneau-ideal">{{ c.departConseille }}</span>
                 <span class="creneau-icone">{{ c.nuit ? '🌙' : '☀️' }}</span>
-                <span class="creneau-meta">PM {{ c.pmHeure }} · coeff {{ c.coeff }} · score {{ c.score }}</span>
+                <span v-if="!c.realisable" class="creneau-tag">hors plage</span>
+                <span class="creneau-meta">idéal {{ c.heureIdeal }} · PM {{ c.pmHeure }} · coeff {{ c.coeff }} · score {{ c.score }}</span>
               </li>
             </ul>
           </div>
@@ -124,7 +125,7 @@ import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   etat, donneesAnnee, scoreVersStatut,
-  calculerDetailJour, hhmm2min, min2hhmm
+  calculerDetailJour, hhmm2min, min2hhmm, milieuFenetre
 } from '../composables/utiliserCourant.js'
 
 const route  = useRoute()
@@ -136,24 +137,29 @@ const jourData = computed(() => donneesAnnee.value.get(dateStr.value) ?? null)
 /** Direction locale à cette vue (découplée de la direction globale) */
 const directionLocale = ref('aller')
 
-/** Heure de départ réactive selon la direction sélectionnée */
-const heureDepart = computed(() =>
-  directionLocale.value === 'aller' ? etat.heureDepartAller : etat.heureDepartRetour
-)
+/** Milieu de la plage de départ souhaitée pour la direction active (minutes) */
+function milieuPlageActive() {
+  return directionLocale.value === 'aller'
+    ? milieuFenetre(hhmm2min(etat.heureDepartAllerDebut),  hhmm2min(etat.heureDepartAllerFin))
+    : milieuFenetre(hhmm2min(etat.heureDepartRetourDebut), hhmm2min(etat.heureDepartRetourFin))
+}
 
-/** Minutes de départ synchronisées avec l'heure de départ active */
-const minutesDepart = ref(hhmm2min(etat.heureDepartAller))
+/** Heure de départ testée dans le panneau de calcul (par défaut : milieu de plage) */
+const minutesDepart = ref(milieuPlageActive())
+const heureDepart = computed(() => min2hhmm(minutesDepart.value))
 
-// Quand on change de direction, on cale le curseur sur l'heure correspondante
-watch(directionLocale, () => { minutesDepart.value = hhmm2min(heureDepart.value) })
+// Quand on change de direction, on recale le curseur sur le milieu de la plage
+watch(directionLocale, () => { minutesDepart.value = milieuPlageActive() })
 
-// Quand l'heure change depuis le panneau paramètres, on répercute sur le curseur
-watch(() => etat.heureDepartAller,  h => { if (directionLocale.value === 'aller')  minutesDepart.value = hhmm2min(h) })
-watch(() => etat.heureDepartRetour, h => { if (directionLocale.value === 'retour') minutesDepart.value = hhmm2min(h) })
+// Quand une plage change dans le panneau paramètres, on répercute si pertinent
+watch(() => [etat.heureDepartAllerDebut, etat.heureDepartAllerFin], () => {
+  if (directionLocale.value === 'aller') minutesDepart.value = milieuPlageActive()
+})
+watch(() => [etat.heureDepartRetourDebut, etat.heureDepartRetourFin], () => {
+  if (directionLocale.value === 'retour') minutesDepart.value = milieuPlageActive()
+})
 
 function mettreAJourDepartHeure(hhmm) {
-  if (directionLocale.value === 'aller') etat.heureDepartAller  = hhmm
-  else                                   etat.heureDepartRetour = hhmm
   minutesDepart.value = hhmm2min(hhmm)
 }
 
@@ -267,9 +273,19 @@ const dateSuivante   = computed(() => dateDelta(+1))
 }
 .liste-creneaux { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
 .creneau { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+.creneau--hors-plage { opacity: 0.55; }
 .creneau-puce { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .creneau-ideal { font-weight: 700; font-variant-numeric: tabular-nums; }
 .creneau-icone { font-size: 0.85rem; }
+.creneau-tag {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 0.3rem;
+}
 .creneau-meta { color: var(--text-muted); font-size: 0.78rem; margin-left: auto; }
 .pm-ciblee { font-weight: 400; color: var(--text-muted); font-size: 0.82rem; }
 

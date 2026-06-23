@@ -1,18 +1,22 @@
 <template>
   <div class="panneau-params">
     <div class="groupe">
-      <label for="heure-depart-aller">Départ aller</label>
-      <input id="heure-depart-aller" type="time" v-model="etat.heureDepartAller" />
+      <label>Plage départ aller</label>
+      <div class="plage">
+        <input type="time" v-model="etat.heureDepartAllerDebut" aria-label="Début plage départ aller" />
+        <span class="plage-sep">→</span>
+        <input type="time" v-model="etat.heureDepartAllerFin" aria-label="Fin plage départ aller" />
+      </div>
       <span class="aide">Cherbourg → Aurigny</span>
     </div>
     <div class="groupe">
-      <label for="heure-depart-retour">Départ retour</label>
-      <input id="heure-depart-retour" type="time" v-model="etat.heureDepartRetour" />
+      <label>Plage départ retour</label>
+      <div class="plage">
+        <input type="time" v-model="etat.heureDepartRetourDebut" aria-label="Début plage départ retour" />
+        <span class="plage-sep">→</span>
+        <input type="time" v-model="etat.heureDepartRetourFin" aria-label="Fin plage départ retour" />
+      </div>
       <span class="aide">Aurigny → Cherbourg</span>
-    </div>
-    <div class="groupe">
-      <label>Tolérance ±{{ etat.tolerance }} min</label>
-      <input type="range" min="0" max="180" step="15" v-model.number="etat.tolerance" />
     </div>
     <div class="groupe">
       <label>Vitesse fond {{ etat.vitesseFond.toFixed(1) }} nœuds</label>
@@ -76,6 +80,12 @@ input[type="range"] {
   padding: 0;
   cursor: pointer;
 }
+.plage {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.plage-sep { color: var(--text-muted); }
 .aide {
   font-size: 0.72rem;
   color: var(--text-muted);

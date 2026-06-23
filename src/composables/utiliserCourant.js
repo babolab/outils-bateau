@@ -3,9 +3,12 @@ import { reactive, computed } from 'vue'
 // ─── État global partagé entre toutes les vues ────────────────────────────────
 
 export const etat = reactive({
-  heureDepartAller:  '08:30',  // centre de la plage 7h30–9h30 (Cherbourg → Aurigny)
-  heureDepartRetour: '15:00',  // heure de départ retour (Aurigny → Cherbourg)
-  tolerance:   60,             // minutes (±1h)
+  // Plage horaire souhaitée pour le départ aller (Cherbourg → Aurigny)
+  heureDepartAllerDebut:  '07:30',
+  heureDepartAllerFin:    '09:30',
+  // Plage horaire souhaitée pour le départ retour (Aurigny → Cherbourg)
+  heureDepartRetourDebut: '14:00',
+  heureDepartRetourFin:   '16:00',
   vitesseFond: 5.5,            // nœuds
   direction:   'both',         // 'aller' | 'retour' | 'both'
   annee:       new Date().getFullYear(),
@@ -19,9 +22,6 @@ const ALLER_FENETRE_DEBUT  =  80   // PM + 1h20
 const ALLER_FENETRE_FIN    = 200   // PM + 3h20
 const RETOUR_FENETRE_DEBUT = -220  // PM − 3h40
 const RETOUR_FENETRE_FIN   = -160  // PM − 2h40
-
-// Pénalité douce appliquée au score d'un créneau dont l'heure idéale tombe de nuit.
-const FACTEUR_NUIT = 0.85
 
 /**
  * Heure idéale de départ aller (en minutes après la PM) selon la vitesse.
@@ -132,6 +132,17 @@ export function min2hhmm(minutes) {
 }
 
 /**
+ * Milieu d'une plage horaire [debutMin, finMin] en gérant le passage à minuit.
+ * @param {number} debutMin
+ * @param {number} finMin
+ * @returns {number} minutes depuis minuit
+ */
+export function milieuFenetre(debutMin, finMin) {
+  const fin = finMin >= debutMin ? finMin : finMin + 1440
+  return Math.round((debutMin + fin) / 2) % 1440
+}
+
+/**
  * Écart circulaire minimal entre deux heures exprimées en minutes (gestion minuit).
  * @param {number} a
  * @param {number} b
@@ -169,6 +180,21 @@ export function calculerScore(departMinutes, idealMinutes, coeff) {
 function estDansFenetre(departMin, debutMin, finMin) {
   if (debutMin <= finMin) return departMin >= debutMin && departMin <= finMin
   return departMin >= debutMin || departMin <= finMin
+}
+
+/**
+ * Renvoie le point de la fenêtre [debutMin, finMin] (circulaire) le plus proche
+ * d'une cible : la cible elle-même si elle est dans la fenêtre, sinon le bord le
+ * plus proche. Sert à trouver l'heure de départ réalisable la plus proche de
+ * l'idéal dans la plage horaire souhaitée par l'utilisateur.
+ * @param {number} cibleMin
+ * @param {number} debutMin
+ * @param {number} finMin
+ * @returns {number}
+ */
+function pointFenetreLePlusProche(cibleMin, debutMin, finMin) {
+  if (estDansFenetre(cibleMin, debutMin, finMin)) return cibleMin
+  return ecartCirculaire(cibleMin, debutMin) <= ecartCirculaire(cibleMin, finMin) ? debutMin : finMin
 }
 
 /**
@@ -243,16 +269,21 @@ function grouperParJour(marees) {
 }
 
 /**
- * Construit le créneau de passage d'une marée (PM) pour une direction donnée.
- * Chaque marée du jour génère son propre créneau idéal : le score reflète la
- * qualité du courant à l'heure idéale (pondérée par le coefficient), avec une
- * pénalité douce si ce créneau idéal tombe de nuit.
+ * Construit le créneau de passage d'une marée (PM) pour une direction donnée,
+ * testé contre la plage horaire de départ souhaitée par l'utilisateur.
+ *
+ * On détermine l'heure de départ réalisable la plus proche de l'idéal courant
+ * (PM ± offset) tout en restant dans la plage souhaitée, puis on la score. Une
+ * marée dont l'idéal tombe hors plage est donc fortement pénalisée (et n'apparaît
+ * pas en vert), ce qui distingue les marées cohérentes avec l'horaire visé.
+ *
  * @param {Object} pm - extrême PM enrichi { minutesLocales, heureLocale, coeff }
  * @param {string} direction - 'aller' | 'retour'
  * @param {number} vitesse - nœuds
+ * @param {{debut: number, fin: number}} plage - plage de départ souhaitée (minutes)
  * @returns {Object}
  */
-function creneauPourMaree(pm, direction, vitesse) {
+function creneauPourMaree(pm, direction, vitesse, plage) {
   const offset      = direction === 'aller' ? idealAllerMin(vitesse) : idealRetourMin(vitesse)
   const debutOffset = direction === 'aller' ? ALLER_FENETRE_DEBUT    : RETOUR_FENETRE_DEBUT
   const finOffset   = direction === 'aller' ? ALLER_FENETRE_FIN      : RETOUR_FENETRE_FIN
@@ -261,20 +292,26 @@ function creneauPourMaree(pm, direction, vitesse) {
   const debutFenetre = (pm.minutesLocales + debutOffset + 1440) % 1440
   const finFenetre   = (pm.minutesLocales + finOffset   + 1440) % 1440
 
-  const nuit  = estNuit(idealMin)
-  // Score à l'heure idéale = qualité intrinsèque de la marée (coefficient).
-  const score = Math.round(calculerScore(idealMin, idealMin, pm.coeff) * (nuit ? FACTEUR_NUIT : 1))
+  // Heure de départ réalisable la plus proche de l'idéal, contrainte à la plage.
+  const departReco = pointFenetreLePlusProche(idealMin, plage.debut, plage.fin)
+  // Score = qualité du courant (coefficient) atténuée par l'écart à l'idéal et
+  // par la sortie éventuelle de la fenêtre de courant favorable SHOM.
+  const score = calculerScoreAvecFenetre(departReco, idealMin, pm.coeff, debutFenetre, finFenetre)
+  // Cohérent = on capte le courant favorable en partant dans la plage souhaitée.
+  const realisable = estDansFenetre(departReco, debutFenetre, finFenetre)
 
   return {
-    pmHeure:    pm.heureLocale,
-    pmMinutes:  pm.minutesLocales,
-    heureIdeal: min2hhmm(idealMin),
+    pmHeure:        pm.heureLocale,
+    pmMinutes:      pm.minutesLocales,
+    heureIdeal:     min2hhmm(idealMin),
     idealMin,
+    departConseille: min2hhmm(departReco),
     debutFenetre,
     finFenetre,
     coeff: pm.coeff,
     score,
-    nuit
+    nuit: estNuit(departReco),
+    realisable
   }
 }
 
@@ -289,17 +326,19 @@ function meilleurCreneau(creneaux) {
  * (scoreAller, heureIdealAller…) reflètent la meilleure des marées du jour.
  * @param {Array} marees
  * @param {number} vitesseFond - nœuds
+ * @param {{debut: number, fin: number}} plageAller  - plage de départ aller (minutes)
+ * @param {{debut: number, fin: number}} plageRetour - plage de départ retour (minutes)
  * @returns {Map<string, JourData>}
  */
-function calculerDonneesAnnee(marees, vitesseFond) {
+function calculerDonneesAnnee(marees, vitesseFond, plageAller, plageRetour) {
   const parJour = grouperParJour(marees)
   const resultat = new Map()
 
   for (const [date, extremes] of parJour) {
     const pms = extremes.filter(e => e.type === 'High')
     // Un créneau par marée (PM) du jour, pour chaque direction.
-    const creneauxAller  = pms.map(pm => creneauPourMaree(pm, 'aller',  vitesseFond))
-    const creneauxRetour = pms.map(pm => creneauPourMaree(pm, 'retour', vitesseFond))
+    const creneauxAller  = pms.map(pm => creneauPourMaree(pm, 'aller',  vitesseFond, plageAller))
+    const creneauxRetour = pms.map(pm => creneauPourMaree(pm, 'retour', vitesseFond, plageRetour))
 
     const meilleurAller  = meilleurCreneau(creneauxAller)
     const meilleurRetour = meilleurCreneau(creneauxRetour)
@@ -325,7 +364,9 @@ function calculerDonneesAnnee(marees, vitesseFond) {
 
 export const donneesAnnee = computed(() => {
   if (!etat.marees.length) return new Map()
-  return calculerDonneesAnnee(etat.marees, etat.vitesseFond)
+  const plageAller  = { debut: hhmm2min(etat.heureDepartAllerDebut),  fin: hhmm2min(etat.heureDepartAllerFin) }
+  const plageRetour = { debut: hhmm2min(etat.heureDepartRetourDebut), fin: hhmm2min(etat.heureDepartRetourFin) }
+  return calculerDonneesAnnee(etat.marees, etat.vitesseFond, plageAller, plageRetour)
 })
 
 // ─── Calcul détaillé pour la vue d'un jour ───────────────────────────────────
